@@ -57,7 +57,7 @@
         [[UITextField alloc] initWithFrame:CGRectMake(130.0f, 79.0f, 180.0f, 50.0f)];
     _txtfield_dormain.delegate = self;
     _txtfield_dormain.returnKeyType = UIReturnKeyDone;
-    _txtfield_dormain.text = @"www.baidu.com";
+    _txtfield_dormain.text = @"api.xiaomajia.com";
     [self.view addSubview:_txtfield_dormain];
 
 

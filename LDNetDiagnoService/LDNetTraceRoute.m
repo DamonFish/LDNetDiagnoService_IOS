@@ -79,7 +79,14 @@
     destination = (struct sockaddr *)[addrData bytes];
 
     //初始化套接口
-    struct sockaddr fromAddr;
+//    struct sockaddr fromAddr;
+    
+    union sockaddr_union {
+    struct sockaddr sa; //16
+    struct sockaddr_in in4; //16
+    struct sockaddr_in6 in6; //28
+    } fromAddr;
+    
     int recv_sock;
     int send_sock;
     Boolean error = false;
@@ -167,13 +174,13 @@
                     delta = [LDNetTimer computeDurationSince:startTime];
 
                     //将“二进制整数” －> “点分十进制，获取hostAddress和hostName
-                    if (fromAddr.sa_family == AF_INET) {
+                    if (fromAddr.sa.sa_family == AF_INET) {
                         char display[INET_ADDRSTRLEN] = {0};
                         inet_ntop(AF_INET, &((struct sockaddr_in *)&fromAddr)->sin_addr.s_addr, display, sizeof(display));
                         hostAddress = [NSString stringWithFormat:@"%s", display];
                     }
                     
-                    else if (fromAddr.sa_family == AF_INET6) {
+                    else if (fromAddr.sa.sa_family == AF_INET6) {
                         char ip[INET6_ADDRSTRLEN];
                         inet_ntop(AF_INET6, &((struct sockaddr_in6 *)&fromAddr)->sin6_addr, ip, INET6_ADDRSTRLEN);
                         hostAddress = [NSString stringWithUTF8String:ip];

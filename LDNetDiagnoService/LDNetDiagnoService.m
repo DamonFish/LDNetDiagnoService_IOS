@@ -190,6 +190,7 @@ static NSString *const kCheckOutIPURL = @"";
  */
 - (void)recordCurrentAppVersion
 {
+    // FIXEME: 使用APP 本身的Device类处理; - Joe
     //输出应用版本信息和用户ID
     [self recordStepInfo:[NSString stringWithFormat:@"应用code: %@", _appCode]];
     NSDictionary *dicBundle = [[NSBundle mainBundle] infoDictionary];
@@ -215,7 +216,7 @@ static NSString *const kCheckOutIPURL = @"";
     [self recordStepInfo:[NSString stringWithFormat:@"机器ID: %@", _deviceID]];
 
 
-    //运营商信息
+    //运营商信息 （iOS16以后无法拿到了-Joe）
     if (!_carrierName || [_carrierName isEqualToString:@""]) {
         CTTelephonyNetworkInfo *netInfo = [[CTTelephonyNetworkInfo alloc] init];
         CTCarrier *carrier = [netInfo subscriberCellularProvider];
@@ -245,6 +246,10 @@ static NSString *const kCheckOutIPURL = @"";
 - (void)recordLocalNetEnvironment
 {
     [self recordStepInfo:[NSString stringWithFormat:@"\n\n诊断域名 %@...\n", _dormain]];
+    
+    // FIXEME: 该用 RealReachability 方案 - Joe
+    
+    /*
     //判断是否联网以及获取网络类型
     NSArray *typeArr = [NSArray arrayWithObjects:@"2G", @"3G", @"4G", @"5G", @"wifi", nil];
     _curNetType = [LDNetGetAddress getNetworkTypeFromStatusBar];
@@ -258,6 +263,7 @@ static NSString *const kCheckOutIPURL = @"";
                                                           [typeArr objectAtIndex:_curNetType - 1]]];
         }
     }
+     */
 
     //本地ip信息
     _localIp = [LDNetGetAddress deviceIPAdress];
