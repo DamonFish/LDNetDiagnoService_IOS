@@ -32,6 +32,8 @@
  */
 - (void)netDiagnosisDidEnd:(NSString *)allLogInfo;
 
+- (NSInteger)netDiagnosisGetNetworkType;
+
 @end
 
 

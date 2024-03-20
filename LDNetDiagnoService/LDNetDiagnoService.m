@@ -264,6 +264,30 @@ static NSString *const kCheckOutIPURL = @"";
         }
     }
      */
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisGetNetworkType)]) {
+        NSInteger type = [self.delegate netDiagnosisGetNetworkType];
+        switch (type) {
+            case 0: // 4G
+                _curNetType = NETWORK_TYPE_4G;
+                break;
+            case 1: // 3G
+                _curNetType = NETWORK_TYPE_3G;
+                break;
+            case 2: // 5G
+                _curNetType = NETWORK_TYPE_5G;
+                break;
+            case 3:  // 2G
+                _curNetType = NETWORK_TYPE_2G;
+                break;
+            case 4: // wifi
+                _curNetType = NETWORK_TYPE_WIFI;
+                break;
+            default:
+                _curNetType = NETWORK_TYPE_NONE;
+                break;
+        }
+    }
 
     //本地ip信息
     _localIp = [LDNetGetAddress deviceIPAdress];
