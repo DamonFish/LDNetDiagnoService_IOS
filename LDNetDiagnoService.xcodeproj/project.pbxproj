@@ -377,7 +377,7 @@
 					};
 					629AF6E01A0125E5001CBB3E = {
 						CreatedOnToolsVersion = 6.1;
-						DevelopmentTeam = GJ567XT4W7;
+						DevelopmentTeam = 7CA89CVK8A;
 						ProvisioningStyle = Automatic;
 					};
 					629AF6F91A0125E5001CBB3E = {
@@ -695,11 +695,11 @@
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = "Brand Assets";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = GJ567XT4W7;
+				DEVELOPMENT_TEAM = 7CA89CVK8A;
 				INFOPLIST_FILE = LDNetDiagnoServiceDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.joezhang.ldn;
+				PRODUCT_BUNDLE_IDENTIFIER = com.joezhang.ldnTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -713,11 +713,11 @@
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = "Brand Assets";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = GJ567XT4W7;
+				DEVELOPMENT_TEAM = 7CA89CVK8A;
 				INFOPLIST_FILE = LDNetDiagnoServiceDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.joezhang.ldn;
+				PRODUCT_BUNDLE_IDENTIFIER = com.joezhang.ldnTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";

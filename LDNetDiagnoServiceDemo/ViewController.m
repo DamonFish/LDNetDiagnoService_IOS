@@ -128,6 +128,11 @@
 
 
 #pragma mark NetDiagnosisDelegate
+
+- (NSInteger)netDiagnosisGetNetworkType {
+    return 4; // 默认是wifi
+}
+
 - (void)netDiagnosisDidStarted
 {
     NSLog(@"开始诊断～～～");

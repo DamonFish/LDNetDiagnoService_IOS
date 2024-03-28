@@ -15,7 +15,7 @@
 #import "LDNetTimer.h"
 #import "LDNetConnect.h"
 
-static NSString *const kPingOpenServerIP = @"";
+static NSString *const kPingOpenServerIP = @"47.96.228.95";
 static NSString *const kCheckOutIPURL = @"";
 
 @interface LDNetDiagnoService () <LDNetPingDelegate, LDNetTraceRouteDelegate,
@@ -92,6 +92,9 @@ static NSString *const kCheckOutIPURL = @"";
 
     _isRunning = YES;
     [_logInfo setString:@""];
+    if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisDidStarted)]) {
+        [self.delegate netDiagnosisDidStarted];
+    }
     [self recordStepInfo:@"开始诊断..."];
     [self recordCurrentAppVersion];
     [self recordLocalNetEnvironment];
@@ -286,6 +289,18 @@ static NSString *const kCheckOutIPURL = @"";
             default:
                 _curNetType = NETWORK_TYPE_NONE;
                 break;
+        }
+    }
+    
+    NSArray *typeArr = [NSArray arrayWithObjects:@"2G", @"3G", @"4G", @"5G", @"wifi", nil];
+    if (_curNetType == 0) {
+        [self recordStepInfo:[NSString stringWithFormat:@"当前是否联网: 未联网"]];
+    } else {
+        [self recordStepInfo:[NSString stringWithFormat:@"当前是否联网: 已联网"]];
+        if (_curNetType > 0 && _curNetType < 6) {
+            [self
+                recordStepInfo:[NSString stringWithFormat:@"当前联网类型: %@",
+                                                          [typeArr objectAtIndex:_curNetType - 1]]];
         }
     }
 
