@@ -98,7 +98,7 @@ static NSString *const kCheckOutIPURL = @"";
     [self recordStepInfo:@"开始诊断..."];
     [self recordCurrentAppVersion];
     [self recordLocalNetEnvironment];
-
+    
     //未联网不进行任何检测
     if (_curNetType == 0) {
         _isRunning = NO;
@@ -195,7 +195,8 @@ static NSString *const kCheckOutIPURL = @"";
 {
     // FIXEME: 使用APP 本身的Device类处理; - Joe
     //输出应用版本信息和用户ID
-    [self recordStepInfo:[NSString stringWithFormat:@"应用code: %@", _appCode]];
+//    [self recordStepInfo:[NSString stringWithFormat:@"应用code: %@", _appCode]];
+    
     NSDictionary *dicBundle = [[NSBundle mainBundle] infoDictionary];
 
     if (!_appName || [_appName isEqualToString:@""]) {
@@ -206,7 +207,7 @@ static NSString *const kCheckOutIPURL = @"";
     if (!_appVersion || [_appVersion isEqualToString:@""]) {
         _appVersion = [dicBundle objectForKey:@"CFBundleShortVersionString"];
     }
-    [self recordStepInfo:[NSString stringWithFormat:@"应用版本: %@", _appVersion]];
+    [self recordStepInfo:[NSString stringWithFormat:@"应用版本: %@ (%@)", _appVersion, _appCode]];
     [self recordStepInfo:[NSString stringWithFormat:@"用户id: %@", _UID]];
 
     //输出机器信息
@@ -217,7 +218,6 @@ static NSString *const kCheckOutIPURL = @"";
         _deviceID = [self uniqueAppInstanceIdentifier];
     }
     [self recordStepInfo:[NSString stringWithFormat:@"机器ID: %@", _deviceID]];
-
 
     //运营商信息 （iOS16以后无法拿到了-Joe）
     if (!_carrierName || [_carrierName isEqualToString:@""]) {
@@ -240,6 +240,9 @@ static NSString *const kCheckOutIPURL = @"";
     [self recordStepInfo:[NSString stringWithFormat:@"ISOCountryCode: %@", _ISOCountryCode]];
     [self recordStepInfo:[NSString stringWithFormat:@"MobileCountryCode: %@", _MobileCountryCode]];
     [self recordStepInfo:[NSString stringWithFormat:@"MobileNetworkCode: %@", _MobileNetCode]];
+    
+    
+    [self recordProgress: 0.17];
 }
 
 
@@ -334,6 +337,8 @@ static NSString *const kCheckOutIPURL = @"";
                                                       [_hostAddress componentsJoinedByString:@", "],
                                                       time_duration]];
     }
+    
+    [self recordProgress: 0.3];
 }
 
 /**
@@ -387,10 +392,10 @@ static NSString *const kCheckOutIPURL = @"";
     }
 
     //不管服务器解析DNS是否可达，均需要ping指定ip地址
-    if([_localIp rangeOfString:@":"].location == NSNotFound){
+//    if([_localIp rangeOfString:@":"].location == NSNotFound){  // removed by Joe
         [pingAdd addObject:kPingOpenServerIP];
         [pingInfo addObject:@"开放服务器"];
-    }
+//    }
 
     [self recordStepInfo:@"\n开始ping..."];
     _netPinger = [[LDNetPing alloc] init];
@@ -405,6 +410,8 @@ static NSString *const kCheckOutIPURL = @"";
             [_netPinger runWithHostName:[pingAdd objectAtIndex:i] normalPing:YES];
         }
     }
+    
+    [self recordProgress: 0.6];
 }
 
 
@@ -424,6 +431,7 @@ static NSString *const kCheckOutIPURL = @"";
 #pragma mark - traceRouteDelegate
 - (void)appendRouteLog:(NSString *)routeLog
 {
+    [self recordProgress: 0.8];
     [self recordStepInfo:routeLog];
 }
 
@@ -434,6 +442,8 @@ static NSString *const kCheckOutIPURL = @"";
     if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisDidEnd:)]) {
         [self.delegate netDiagnosisDidEnd:_logInfo];
     }
+    
+    [self recordProgress: 1];
 }
 
 #pragma mark - connectDelegate
@@ -465,6 +475,18 @@ static NSString *const kCheckOutIPURL = @"";
     }
 }
 
+/**
+ * 如果调用者实现了progress接口，输出进度信息
+ */
+- (void)recordProgress:(Float32)progress
+{
+    if (progress > 1 || progress < 0) {
+        return;
+    }
+    if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisProgress:)]) {
+        [self.delegate netDiagnosisProgress: progress];
+    }
+}
 
 /**
  * 获取deviceID

@@ -25,6 +25,12 @@
  */
 - (void)netDiagnosisStepInfo:(NSString *)stepInfo;
 
+/**
+ * 逐步返回监控进度，0 ~ 1
+ * 如果需要实时显示监控进度，实现此接口方法
+ */
+- (void)netDiagnosisProgress:(Float32)progress;
+
 
 /**
  * 因为监控过程是一个异步过程，当监控结束后告诉调用者；
