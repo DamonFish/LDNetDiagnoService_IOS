@@ -66,7 +66,9 @@
           carrierName:(NSString *)theCarrierName
        ISOCountryCode:(NSString *)theISOCountryCode
     MobileCountryCode:(NSString *)theMobileCountryCode
-        MobileNetCode:(NSString *)theMobileNetCode;
+        MobileNetCode:(NSString *)theMobileNetCode
+                 imIP:(NSString *)theImIP
+               imPort:(int)theImPort;
 
 
 /**

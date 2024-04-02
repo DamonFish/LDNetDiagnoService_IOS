@@ -29,6 +29,9 @@ static NSString *const kCheckOutIPURL = @"";
     NSString *_ISOCountryCode;
     NSString *_MobileCountryCode;
     NSString *_MobileNetCode;
+    
+    NSString *_imIP;
+    int _imPort;
 
     NETWORK_TYPE _curNetType;
     NSString *_localIp;
@@ -61,6 +64,8 @@ static NSString *const kCheckOutIPURL = @"";
        ISOCountryCode:(NSString *)theISOCountryCode
     MobileCountryCode:(NSString *)theMobileCountryCode
         MobileNetCode:(NSString *)theMobileNetCode
+                 imIP:(NSString *)theImIP
+               imPort:(int)theImPort
 {
     self = [super init];
     if (self) {
@@ -74,6 +79,9 @@ static NSString *const kCheckOutIPURL = @"";
         _ISOCountryCode = theISOCountryCode;
         _MobileCountryCode = theMobileCountryCode;
         _MobileNetCode = theMobileNetCode;
+        
+        _imIP = theImIP;
+        _imPort = theImPort;
 
         _logInfo = [[NSMutableString alloc] initWithCapacity:20];
         _isRunning = NO;
@@ -111,25 +119,43 @@ static NSString *const kCheckOutIPURL = @"";
     }
 
     if (_isRunning) {
+        // 通过接口获取运营商信息，目前不支持。 by Joe
 //        [self recordOutIPInfo];
     }
 
     if (_isRunning) {
         // connect诊断，同步过程, 如果TCP无法连接，检查本地网络环境
         _connectSuccess = NO;
-        [self recordStepInfo:@"\n开始TCP连接测试..."];
+        
+        // 添加测试IM连接
+        if (_imIP.length > 0) {
+            _hostAddress = [_hostAddress arrayByAddingObject: _imIP];
+        }
+        
         if ([_hostAddress count] > 0) {
             _netConnect = [[LDNetConnect alloc] init];
             _netConnect.delegate = self;
             for (int i = 0; i < [_hostAddress count]; i++) {
-                [_netConnect runWithHostAddress:[_hostAddress objectAtIndex:i] port:80];
+                [self recordStepInfo:@"\n开始TCP连接测试..."];
+                
+                NSString *address = [_hostAddress objectAtIndex:i];
+                if ([address isEqualToString: _imIP]) {
+                    [_netConnect runWithHostAddress:[_hostAddress objectAtIndex:i] port:_imPort];
+                } else {
+                    [_netConnect runWithHostAddress:[_hostAddress objectAtIndex:i] port:80];
+                }
+                
+                [self pingIP: address];
             }
         } else {
             [self recordStepInfo:@"DNS解析失败，主机地址不可达"];
         }
+        
+        /*
         if (_isRunning) {
             [self pingDialogsis:!_connectSuccess];
         }
+         */
     }
 
 
@@ -253,23 +279,8 @@ static NSString *const kCheckOutIPURL = @"";
 {
     [self recordStepInfo:[NSString stringWithFormat:@"\n\n诊断域名 %@...\n", _dormain]];
     
-    // FIXEME: 该用 RealReachability 方案 - Joe
-    
-    /*
     //判断是否联网以及获取网络类型
-    NSArray *typeArr = [NSArray arrayWithObjects:@"2G", @"3G", @"4G", @"5G", @"wifi", nil];
-    _curNetType = [LDNetGetAddress getNetworkTypeFromStatusBar];
-    if (_curNetType == 0) {
-        [self recordStepInfo:[NSString stringWithFormat:@"当前是否联网: 未联网"]];
-    } else {
-        [self recordStepInfo:[NSString stringWithFormat:@"当前是否联网: 已联网"]];
-        if (_curNetType > 0 && _curNetType < 6) {
-            [self
-                recordStepInfo:[NSString stringWithFormat:@"当前联网类型: %@",
-                                                          [typeArr objectAtIndex:_curNetType - 1]]];
-        }
-    }
-     */
+    // 已经改用 RealReachability 方案 - Joe
     
     if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisGetNetworkType)]) {
         NSInteger type = [self.delegate netDiagnosisGetNetworkType];
@@ -368,6 +379,18 @@ static NSString *const kCheckOutIPURL = @"";
 }
 
 
+- (void)pingIP:(NSString *)ip {
+//    [self recordStepInfo:@"\n开始ping..."];
+    _netPinger = [[LDNetPing alloc] init];
+    _netPinger.delegate = self;
+    
+    [self recordStepInfo:[NSString stringWithFormat:@"\nping: %@  ...", ip]];
+    
+    [_netPinger runWithHostName:ip normalPing:YES];
+    
+    [self recordProgress: 0.6];
+}
+
 /**
  * 构建ping列表并进行ping诊断
  */
@@ -396,12 +419,15 @@ static NSString *const kCheckOutIPURL = @"";
         [pingAdd addObject:kPingOpenServerIP];
         [pingInfo addObject:@"开放服务器"];
 //    }
+    
+    [pingAdd addObject: @"121.199.14.159"];
+    [pingInfo addObject:@"IM服务器"];
 
     [self recordStepInfo:@"\n开始ping..."];
     _netPinger = [[LDNetPing alloc] init];
     _netPinger.delegate = self;
     for (int i = 0; i < [pingAdd count]; i++) {
-        [self recordStepInfo:[NSString stringWithFormat:@"ping: %@ %@ ...",
+        [self recordStepInfo:[NSString stringWithFormat:@"\nping: %@ %@ ...",
                                                         [pingInfo objectAtIndex:i],
                                                         [pingAdd objectAtIndex:i]]];
         if ([[pingAdd objectAtIndex:i] isEqualToString:kPingOpenServerIP]) {

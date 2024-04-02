@@ -83,7 +83,9 @@
                                                         carrierName:nil
                                                      ISOCountryCode:nil
                                                   MobileCountryCode:nil
-                                                      MobileNetCode:nil];
+                                                      MobileNetCode:nil 
+                                                               imIP:@"121.199.14.159"
+                                                             imPort:3101];
     _netDiagnoService.delegate = self;
     _isRunning = NO;
 }

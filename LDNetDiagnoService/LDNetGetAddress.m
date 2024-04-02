@@ -328,53 +328,6 @@
     return [NSArray arrayWithArray:servers];
 }
 
-
-/*!
- * 获取当前网络类型
- * 通过statusBar的网络subview获取具体类型
- */
-+ (NETWORK_TYPE)getNetworkTypeFromStatusBar
-{
-    UIApplication *app = [UIApplication sharedApplication];
-    NETWORK_TYPE nettype = NETWORK_TYPE_NONE;
-    //iOS11
-    if ([[app valueForKeyPath:@"_statusBar"] isKindOfClass:NSClassFromString(@"UIStatusBar_Modern")]) {
-        NSArray *views = [[[[app valueForKeyPath:@"statusBar"] valueForKeyPath:@"statusBar"] valueForKeyPath:@"foregroundView"] subviews];
-        for (UIView *view in views) {
-            for (id child in view.subviews) {
-                //wifi
-                if ([child isKindOfClass:NSClassFromString(@"_UIStatusBarWifiSignalView")]) {
-                    nettype = NETWORK_TYPE_WIFI;
-                }
-                //2G 3G 4G
-                if ([child isKindOfClass:NSClassFromString(@"_UIStatusBarStringView")]) {
-                    if ([[child valueForKey:@"_originalText"] containsString:@"2G"]) {
-                        nettype = NETWORK_TYPE_2G;
-                    } else if ([[child valueForKey:@"_originalText"] containsString:@"3G"]) {
-                        nettype = NETWORK_TYPE_3G;
-                    } else if ([[child valueForKey:@"_originalText"] containsString:@"4G"]) {
-                        nettype = NETWORK_TYPE_4G;
-                    }
-                }
-            }
-        }
-    } else {
-//        NSArray *subviews = [[[[UIApplication sharedApplication] valueForKey:@"statusBar"]
-//                              valueForKey:@"foregroundView"] subviews];
-//        NSNumber *dataNetworkItemView = nil;
-//        for (id subview in subviews) {
-//            if ([subview isKindOfClass:[NSClassFromString(@"UIStatusBarDataNetworkItemView") class]]) {
-//                dataNetworkItemView = subview;
-//                break;
-//            }
-//        }
-//        NSNumber *num = [dataNetworkItemView valueForKey:@"dataNetworkType"];
-//        nettype = [num intValue];
-    }
-   return nettype;
-}
-
-
 +(NSString *)formatIPV6Address:(struct in6_addr)ipv6Addr{
     NSString *address = nil;
     
