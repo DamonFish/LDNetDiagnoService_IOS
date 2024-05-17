@@ -74,6 +74,19 @@
     [self.view addSubview:_txtView_log];
 
     // Do any additional setup after loading the view, typically from a nib.
+    
+    NSArray *ex = @[@"xiaomajia-app.oss-cn-hangzhou.aliyuncs.com",
+                   @"xiaomajia-im.oss-cn-hangzhou.aliyuncs.com",
+                   @"oss-cn-hangzhou.aliyuncs.com", 
+//                   @"qiniu.mrpyq.com",
+//                   @"imres.mrpyq.com",
+//                   @"imoss.mrpyq.com",
+//                    @"mposs.mrpyq.com",
+                    @"imres.xiaomajia.com",
+                    @"appres.xiaomajia.com",
+                    @"res.xiaomajia.com",
+                    @"qiniuac.mrpyq.com"];
+    
     _netDiagnoService = [[LDNetDiagnoService alloc] initWithAppCode:@"test"
                                                             appName:@"网络诊断应用"
                                                          appVersion:@"1.0.0"
@@ -83,9 +96,10 @@
                                                         carrierName:nil
                                                      ISOCountryCode:nil
                                                   MobileCountryCode:nil
-                                                      MobileNetCode:nil 
+                                                      MobileNetCode:nil
                                                                imIP:@"121.199.14.159"
-                                                             imPort:3101];
+                                                             imPort:3101
+                                                       extraDomains: ex];
     _netDiagnoService.delegate = self;
     _isRunning = NO;
 }

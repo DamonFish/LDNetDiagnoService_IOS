@@ -68,7 +68,8 @@
     MobileCountryCode:(NSString *)theMobileCountryCode
         MobileNetCode:(NSString *)theMobileNetCode
                  imIP:(NSString *)theImIP
-               imPort:(int)theImPort;
+               imPort:(int)theImPort
+         extraDomains:(NSArray *)pingExtraDomains;
 
 
 /**

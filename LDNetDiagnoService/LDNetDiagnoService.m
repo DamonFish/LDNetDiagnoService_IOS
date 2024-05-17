@@ -32,6 +32,7 @@ static NSString *const kCheckOutIPURL = @"";
     
     NSString *_imIP;
     int _imPort;
+    NSArray *_pingExtraDomains;
 
     NETWORK_TYPE _curNetType;
     NSString *_localIp;
@@ -66,6 +67,7 @@ static NSString *const kCheckOutIPURL = @"";
         MobileNetCode:(NSString *)theMobileNetCode
                  imIP:(NSString *)theImIP
                imPort:(int)theImPort
+         extraDomains:(NSArray *)pingExtraDomains
 {
     self = [super init];
     if (self) {
@@ -82,11 +84,12 @@ static NSString *const kCheckOutIPURL = @"";
         
         _imIP = theImIP;
         _imPort = theImPort;
-
+        _pingExtraDomains = pingExtraDomains;
+        
         _logInfo = [[NSMutableString alloc] initWithCapacity:20];
         _isRunning = NO;
     }
-
+    
     return self;
 }
 
@@ -97,7 +100,7 @@ static NSString *const kCheckOutIPURL = @"";
 - (void)startNetDiagnosis
 {
     if (!_dormain || [_dormain isEqualToString:@""]) return;
-
+    
     _isRunning = YES;
     [_logInfo setString:@""];
     if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisDidStarted)]) {
@@ -105,6 +108,7 @@ static NSString *const kCheckOutIPURL = @"";
     }
     [self recordStepInfo:@"开始诊断..."];
     [self recordCurrentAppVersion];
+    [self recordNetworkConnectStatus];
     [self recordLocalNetEnvironment];
     
     //未联网不进行任何检测
@@ -117,48 +121,25 @@ static NSString *const kCheckOutIPURL = @"";
         }
         return;
     }
-
+    
     if (_isRunning) {
         // 通过接口获取运营商信息，目前不支持。 by Joe
-//        [self recordOutIPInfo];
+        // [self recordOutIPInfo];
     }
-
+    
     if (_isRunning) {
         // connect诊断，同步过程, 如果TCP无法连接，检查本地网络环境
         _connectSuccess = NO;
         
-        // 添加测试IM连接
-        if (_imIP.length > 0) {
-            _hostAddress = [_hostAddress arrayByAddingObject: _imIP];
-        }
+        // 将_dormain放到第一位
+        NSMutableArray *mulArray = [NSMutableArray arrayWithArray:_pingExtraDomains];
+        [mulArray insertObject:_dormain atIndex:0];
+        _pingExtraDomains = mulArray;
         
-        if ([_hostAddress count] > 0) {
-            _netConnect = [[LDNetConnect alloc] init];
-            _netConnect.delegate = self;
-            for (int i = 0; i < [_hostAddress count]; i++) {
-                [self recordStepInfo:@"\n开始TCP连接测试..."];
-                
-                NSString *address = [_hostAddress objectAtIndex:i];
-                if ([address isEqualToString: _imIP]) {
-                    [_netConnect runWithHostAddress:[_hostAddress objectAtIndex:i] port:_imPort];
-                } else {
-                    [_netConnect runWithHostAddress:[_hostAddress objectAtIndex:i] port:80];
-                }
-                
-                [self pingIP: address];
-            }
-        } else {
-            [self recordStepInfo:@"DNS解析失败，主机地址不可达"];
-        }
-        
-        /*
-        if (_isRunning) {
-            [self pingDialogsis:!_connectSuccess];
-        }
-         */
+        [self praseAllDomains];
     }
-
-
+    
+    
     if (_isRunning) {
         //开始诊断traceRoute
         [self recordStepInfo:@"\n开始traceroute..."];
@@ -186,17 +167,17 @@ static NSString *const kCheckOutIPURL = @"";
             [_netConnect stopConnect];
             _netConnect = nil;
         }
-
+        
         if (_netPinger != nil) {
             [_netPinger stopPing];
             _netPinger = nil;
         }
-
+        
         if (_traceRouter != nil) {
             [_traceRouter stopTrace];
             _traceRouter = nil;
         }
-
+        
         _isRunning = NO;
     }
 }
@@ -207,7 +188,7 @@ static NSString *const kCheckOutIPURL = @"";
  */
 - (void)printLogInfo
 {
-    NSLog(@"\n%@\n", _logInfo);
+    // default
 }
 
 
@@ -221,21 +202,21 @@ static NSString *const kCheckOutIPURL = @"";
 {
     // FIXEME: 使用APP 本身的Device类处理; - Joe
     //输出应用版本信息和用户ID
-//    [self recordStepInfo:[NSString stringWithFormat:@"应用code: %@", _appCode]];
+    //    [self recordStepInfo:[NSString stringWithFormat:@"应用code: %@", _appCode]];
     
     NSDictionary *dicBundle = [[NSBundle mainBundle] infoDictionary];
-
+    
     if (!_appName || [_appName isEqualToString:@""]) {
         _appName = [dicBundle objectForKey:@"CFBundleDisplayName"];
     }
     [self recordStepInfo:[NSString stringWithFormat:@"应用名称: %@", _appName]];
-
+    
     if (!_appVersion || [_appVersion isEqualToString:@""]) {
         _appVersion = [dicBundle objectForKey:@"CFBundleShortVersionString"];
     }
     [self recordStepInfo:[NSString stringWithFormat:@"应用版本: %@ (%@)", _appVersion, _appCode]];
     [self recordStepInfo:[NSString stringWithFormat:@"用户id: %@", _UID]];
-
+    
     //输出机器信息
     UIDevice *device = [UIDevice currentDevice];
     [self recordStepInfo:[NSString stringWithFormat:@"机器类型: %@", [device systemName]]];
@@ -244,7 +225,7 @@ static NSString *const kCheckOutIPURL = @"";
         _deviceID = [self uniqueAppInstanceIdentifier];
     }
     [self recordStepInfo:[NSString stringWithFormat:@"机器ID: %@", _deviceID]];
-
+    
     //运营商信息 （iOS16以后无法拿到了-Joe）
     if (!_carrierName || [_carrierName isEqualToString:@""]) {
         CTTelephonyNetworkInfo *netInfo = [[CTTelephonyNetworkInfo alloc] init];
@@ -261,7 +242,7 @@ static NSString *const kCheckOutIPURL = @"";
             _MobileNetCode = @"";
         }
     }
-
+    
     [self recordStepInfo:[NSString stringWithFormat:@"运营商: %@", _carrierName]];
     [self recordStepInfo:[NSString stringWithFormat:@"ISOCountryCode: %@", _ISOCountryCode]];
     [self recordStepInfo:[NSString stringWithFormat:@"MobileCountryCode: %@", _MobileCountryCode]];
@@ -271,14 +252,10 @@ static NSString *const kCheckOutIPURL = @"";
     [self recordProgress: 0.17];
 }
 
-
 /*!
- *  @brief  获取本地网络环境信息
+ *  @brief  获取当前联网状态
  */
-- (void)recordLocalNetEnvironment
-{
-    [self recordStepInfo:[NSString stringWithFormat:@"\n\n诊断域名 %@...\n", _dormain]];
-    
+- (void)recordNetworkConnectStatus {
     //判断是否联网以及获取网络类型
     // 已经改用 RealReachability 方案 - Joe
     
@@ -313,43 +290,75 @@ static NSString *const kCheckOutIPURL = @"";
         [self recordStepInfo:[NSString stringWithFormat:@"当前是否联网: 已联网"]];
         if (_curNetType > 0 && _curNetType < 6) {
             [self
-                recordStepInfo:[NSString stringWithFormat:@"当前联网类型: %@",
-                                                          [typeArr objectAtIndex:_curNetType - 1]]];
+             recordStepInfo:[NSString stringWithFormat:@"当前联网类型: %@",
+                             [typeArr objectAtIndex:_curNetType - 1]]];
         }
     }
+}
 
-    //本地ip信息
+
+/*!
+ *  @brief  获取本地网络环境信息
+ */
+- (void)recordLocalNetEnvironment
+{
+    // 本地ip信息
     _localIp = [LDNetGetAddress deviceIPAdress];
     [self recordStepInfo:[NSString stringWithFormat:@"当前本机IP: %@", _localIp]];
-
+    
     if (_curNetType == NETWORK_TYPE_WIFI) {
         _gatewayIp = [LDNetGetAddress getGatewayIPAddress];
         [self recordStepInfo:[NSString stringWithFormat:@"本地网关: %@", _gatewayIp]];
     } else {
         _gatewayIp = @"";
     }
-
-
+    
+    // 本地DNS信息
     _dnsServers = [NSArray arrayWithArray:[LDNetGetAddress outPutDNSServers]];
     [self recordStepInfo:[NSString stringWithFormat:@"本地DNS: %@",
-                                                    [_dnsServers componentsJoinedByString:@", "]]];
+                          [_dnsServers componentsJoinedByString:@", "]]];
+    [self recordProgress: 0.3];
+}
 
-    [self recordStepInfo:[NSString stringWithFormat:@"远端域名: %@", _dormain]];
-
-    // host地址IP列表
+- (void)parseDomain:(NSString *)domain {
+    [self recordStepInfo: @"\n"];
+    [self recordStepInfo:[NSString stringWithFormat:@"远端域名: %@", domain]];
+    
     long time_start = [LDNetTimer getMicroSeconds];
-    _hostAddress = [NSArray arrayWithArray:[LDNetGetAddress getDNSsWithDormain:_dormain]];
+    NSArray *tempHostAddress = [NSArray arrayWithArray:[LDNetGetAddress getDNSsWithDormain:domain]];
+    
     long time_duration = [LDNetTimer computeDurationSince:time_start] / 1000;
-    if ([_hostAddress count] == 0) {
+    if ([tempHostAddress count] == 0) {
         [self recordStepInfo:[NSString stringWithFormat:@"DNS解析结果: 解析失败"]];
     } else {
+        NSString *firstAddress = tempHostAddress[0];
         [self
-            recordStepInfo:[NSString stringWithFormat:@"DNS解析结果: %@ (%ldms)",
-                                                      [_hostAddress componentsJoinedByString:@", "],
+            recordStepInfo:[NSString stringWithFormat:@"DNS解析结果: %@ (%ldms)", firstAddress,
                                                       time_duration]];
+        
+        if ([firstAddress isEqualToString: _imIP]) {
+            [_netConnect runWithHostAddress:firstAddress port:_imPort];
+        } else {
+            [_netConnect runWithHostAddress:firstAddress port:80];
+        }
+        [self pingIP: firstAddress];
+    }
+}
+
+- (void)praseAllDomains {
+    [self recordStepInfo: @"诊断域名..."];
+    
+    _netConnect = [[LDNetConnect alloc] init];
+    _netConnect.delegate = self;
+    for (NSString *extraDomain in _pingExtraDomains) {
+        [self parseDomain: extraDomain];
+        [self recordProgress: 0.6];
     }
     
-    [self recordProgress: 0.3];
+    // 单独测试IM连接
+    [self parseDomain: _imIP];
+    
+    [self recordProgress: 0.7];
 }
 
 /**
@@ -378,68 +387,14 @@ static NSString *const kCheckOutIPURL = @"";
     [self recordStepInfo:response];
 }
 
-
 - (void)pingIP:(NSString *)ip {
-//    [self recordStepInfo:@"\n开始ping..."];
     _netPinger = [[LDNetPing alloc] init];
     _netPinger.delegate = self;
     
     [self recordStepInfo:[NSString stringWithFormat:@"\nping: %@  ...", ip]];
     
     [_netPinger runWithHostName:ip normalPing:YES];
-    
-    [self recordProgress: 0.6];
 }
-
-/**
- * 构建ping列表并进行ping诊断
- */
-- (void)pingDialogsis:(BOOL)pingLocal
-{
-    //诊断ping信息, 同步过程
-    NSMutableArray *pingAdd = [[NSMutableArray alloc] init];
-    NSMutableArray *pingInfo = [[NSMutableArray alloc] init];
-    if (pingLocal) {
-        [pingAdd addObject:@"127.0.0.1"];
-        [pingInfo addObject:@"本机"];
-        [pingAdd addObject:_localIp];
-        [pingInfo addObject:@"本机IP"];
-        if (_gatewayIp && ![_gatewayIp isEqualToString:@""]) {
-            [pingAdd addObject:_gatewayIp];
-            [pingInfo addObject:@"本地网关"];
-        }
-        if ([_dnsServers count] > 0) {
-            [pingAdd addObject:[_dnsServers objectAtIndex:0]];
-            [pingInfo addObject:@"DNS服务器"];
-        }
-    }
-
-    //不管服务器解析DNS是否可达，均需要ping指定ip地址
-//    if([_localIp rangeOfString:@":"].location == NSNotFound){  // removed by Joe
-        [pingAdd addObject:kPingOpenServerIP];
-        [pingInfo addObject:@"开放服务器"];
-//    }
-    
-    [pingAdd addObject: @"121.199.14.159"];
-    [pingInfo addObject:@"IM服务器"];
-
-    [self recordStepInfo:@"\n开始ping..."];
-    _netPinger = [[LDNetPing alloc] init];
-    _netPinger.delegate = self;
-    for (int i = 0; i < [pingAdd count]; i++) {
-        [self recordStepInfo:[NSString stringWithFormat:@"\nping: %@ %@ ...",
-                                                        [pingInfo objectAtIndex:i],
-                                                        [pingAdd objectAtIndex:i]]];
-        if ([[pingAdd objectAtIndex:i] isEqualToString:kPingOpenServerIP]) {
-            [_netPinger runWithHostName:[pingAdd objectAtIndex:i] normalPing:YES];
-        } else {
-            [_netPinger runWithHostName:[pingAdd objectAtIndex:i] normalPing:YES];
-        }
-    }
-    
-    [self recordProgress: 0.6];
-}
-
 
 #pragma mark -
 #pragma mark - netPingDelegate
@@ -527,6 +482,5 @@ static NSString *const kCheckOutIPURL = @"";
     CFRelease(uuidRef);
     return app_uuid;
 }
-
 
 @end
