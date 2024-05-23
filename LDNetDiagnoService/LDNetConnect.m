@@ -26,6 +26,8 @@
     NSString *_resultLog;
     NSInteger _sumTime;
     CFSocketRef _socket;
+    
+    NSTimer *timer;
 }
 
 @property (nonatomic, assign) long _startTime;  //每次执行的开始时间
@@ -40,6 +42,9 @@
  */
 - (void)stopConnect
 {
+    if (timer) {
+        [timer invalidate];
+    }
     _connectCount = MAXCOUNT_CONNECT + 1;
 }
 
@@ -48,6 +53,10 @@
  */
 - (void)runWithHostAddress:(NSString *)hostAddress port:(int)port
 {
+    if (timer) {
+        [timer invalidate];
+    }
+    
     _hostAddress = hostAddress;
     _isIPV6 = [_hostAddress rangeOfString:@":"].location == NSNotFound?NO:YES;
     tcpPort = port;
@@ -61,9 +70,23 @@
     }
     _startTime = [LDNetTimer getMicroSeconds];
     [self connect];
+    
+    timer = [NSTimer scheduledTimerWithTimeInterval:3.0
+                                             target:self
+                                           selector:@selector(connectTimeout)
+                                           userInfo:nil
+                                            repeats:NO];
+    [[NSRunLoop currentRunLoop] addTimer:timer forMode: NSDefaultRunLoopMode];
+    
     do {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
     } while (_connectCount < MAXCOUNT_CONNECT);
+}
+
+- (void)connectTimeout {
+    _connectCount = MAXCOUNT_CONNECT + 1;
+    [self.delegate
+        appendSocketLog:[NSString stringWithFormat:@"connect to host %@ ... time out", _hostAddress]];
 }
 
 /**
@@ -138,7 +161,10 @@ static void TCPServerConnectCallBack(CFSocketRef socket, CFSocketCallBackType ty
  */
 - (void)readStream:(BOOL)success
 {
-    //    NSString *errorLog = @"";
+    if (timer) {
+        [timer invalidate];
+    }
+    
     if (success) {
         _isExistSuccess = TRUE;
         NSInteger interval = [LDNetTimer computeDurationSince:_startTime] / 1000;
