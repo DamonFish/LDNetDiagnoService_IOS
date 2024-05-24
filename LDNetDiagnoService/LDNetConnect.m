@@ -56,7 +56,6 @@
     if (timer) {
         [timer invalidate];
     }
-    
     _hostAddress = hostAddress;
     _isIPV6 = [_hostAddress rangeOfString:@":"].location == NSNotFound?NO:YES;
     tcpPort = port;
@@ -71,22 +70,9 @@
     _startTime = [LDNetTimer getMicroSeconds];
     [self connect];
     
-    timer = [NSTimer scheduledTimerWithTimeInterval:3.0
-                                             target:self
-                                           selector:@selector(connectTimeout)
-                                           userInfo:nil
-                                            repeats:NO];
-    [[NSRunLoop currentRunLoop] addTimer:timer forMode: NSDefaultRunLoopMode];
-    
     do {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
     } while (_connectCount < MAXCOUNT_CONNECT);
-}
-
-- (void)connectTimeout {
-    _connectCount = MAXCOUNT_CONNECT + 1;
-    [self.delegate
-        appendSocketLog:[NSString stringWithFormat:@"connect to host %@ ... time out", _hostAddress]];
 }
 
 /**
@@ -94,6 +80,10 @@
  */
 - (void)connect
 {
+    if (timer) {
+        [timer invalidate];
+    }
+    
     NSData *addrData = nil;
     
     //设置地址
@@ -117,6 +107,21 @@
     
     if (addrData != nil) {
         [self connectWithAddress:addrData];
+    }
+    
+    timer = [NSTimer scheduledTimerWithTimeInterval:1.5
+                                             target:self
+                                           selector:@selector(connectTimeout:)
+                                           userInfo:[NSNumber numberWithInt:_connectCount]
+                                            repeats:NO];
+}
+
+- (void)connectTimeout:(NSTimer *)index {
+    _connectCount = MAXCOUNT_CONNECT + 1;
+    [self.delegate
+        appendSocketLog:[NSString stringWithFormat:@"connect to host %@ ... time out", _hostAddress]];
+    if (self.delegate && [self.delegate respondsToSelector:@selector(connectDidEnd:)]) {
+        [self.delegate connectDidEnd:false];
     }
 }
 

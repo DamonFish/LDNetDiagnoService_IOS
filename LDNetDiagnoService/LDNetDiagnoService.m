@@ -46,6 +46,8 @@ static NSString *const kCheckOutIPURL = @"";
     LDNetPing *_netPinger;
     LDNetTraceRoute *_traceRouter;
     LDNetConnect *_netConnect;
+    
+    NSInteger _diagnosisDomainIndex;
 }
 
 @end
@@ -84,12 +86,17 @@ static NSString *const kCheckOutIPURL = @"";
         
         _imIP = theImIP;
         _imPort = theImPort;
-        _pingExtraDomains = pingExtraDomains;
+        
+        // 将_dormain放到第一位, imIP放最后一位
+        NSMutableArray *mulArray = [NSMutableArray arrayWithArray:pingExtraDomains];
+        [mulArray insertObject:_dormain atIndex:0];
+        [mulArray addObject:_imIP];
+        _pingExtraDomains = mulArray;
         
         _logInfo = [[NSMutableString alloc] initWithCapacity:20];
         _isRunning = NO;
+        _diagnosisDomainIndex = 0;
     }
-    
     return self;
 }
 
@@ -114,6 +121,7 @@ static NSString *const kCheckOutIPURL = @"";
     //未联网不进行任何检测
     if (_curNetType == 0) {
         _isRunning = NO;
+        _diagnosisDomainIndex = 0;
         [self recordStepInfo:@"\n当前主机未联网，请检查网络！"];
         [self recordStepInfo:@"\n网络诊断结束\n"];
         if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisDidEnd:)]) {
@@ -130,16 +138,15 @@ static NSString *const kCheckOutIPURL = @"";
     if (_isRunning) {
         // connect诊断，同步过程, 如果TCP无法连接，检查本地网络环境
         _connectSuccess = NO;
-        
-        // 将_dormain放到第一位
-        NSMutableArray *mulArray = [NSMutableArray arrayWithArray:_pingExtraDomains];
-        [mulArray insertObject:_dormain atIndex:0];
-        _pingExtraDomains = mulArray;
-        
-        [self praseAllDomains];
     }
+    [self recordProgress: 0.6];
     
-    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [self dialogsisEachDomain];
+    });
+}
+
+- (void)startTraceRouter {
     if (_isRunning) {
         //开始诊断traceRoute
         [self recordStepInfo:@"\n开始traceroute..."];
@@ -177,7 +184,7 @@ static NSString *const kCheckOutIPURL = @"";
             [_traceRouter stopTrace];
             _traceRouter = nil;
         }
-        
+        _diagnosisDomainIndex = 0;
         _isRunning = NO;
     }
 }
@@ -247,7 +254,6 @@ static NSString *const kCheckOutIPURL = @"";
     [self recordStepInfo:[NSString stringWithFormat:@"ISOCountryCode: %@", _ISOCountryCode]];
     [self recordStepInfo:[NSString stringWithFormat:@"MobileCountryCode: %@", _MobileCountryCode]];
     [self recordStepInfo:[NSString stringWithFormat:@"MobileNetworkCode: %@", _MobileNetCode]];
-    
     
     [self recordProgress: 0.17];
 }
@@ -320,45 +326,54 @@ static NSString *const kCheckOutIPURL = @"";
     [self recordProgress: 0.3];
 }
 
-- (void)parseDomain:(NSString *)domain {
-    [self recordStepInfo: @"\n"];
-    [self recordStepInfo:[NSString stringWithFormat:@"远端域名: %@", domain]];
-    
-    long time_start = [LDNetTimer getMicroSeconds];
-    NSArray *tempHostAddress = [NSArray arrayWithArray:[LDNetGetAddress getDNSsWithDormain:domain]];
-    
-    long time_duration = [LDNetTimer computeDurationSince:time_start] / 1000;
-    if ([tempHostAddress count] == 0) {
-        [self recordStepInfo:[NSString stringWithFormat:@"DNS解析结果: 解析失败"]];
-    } else {
-        NSString *firstAddress = tempHostAddress[0];
-        [self
-            recordStepInfo:[NSString stringWithFormat:@"DNS解析结果: %@ (%ldms)", firstAddress,
-                                                      time_duration]];
+- (void)dialogsisEachDomain {
+    if (self.currentDomain) {
+        [self recordStepInfo:[NSString stringWithFormat:@"\n\n诊断域名: %@", self.currentDomain]];
+        long time_start = [LDNetTimer getMicroSeconds];
+        NSArray *tempHostAddress = [NSArray arrayWithArray:[LDNetGetAddress getDNSsWithDormain:self.currentDomain]];
         
-        if ([firstAddress isEqualToString: _imIP]) {
-            [_netConnect runWithHostAddress:firstAddress port:_imPort];
+        long time_duration = [LDNetTimer computeDurationSince:time_start] / 1000;
+        if ([tempHostAddress count] == 0) {
+            [self recordStepInfo:[NSString stringWithFormat:@"DNS解析结果: 解析失败"]];
+            [self currentDomainDialogsisDidEnd];
         } else {
-            [_netConnect runWithHostAddress:firstAddress port:80];
+            NSString *firstAddress = tempHostAddress[0];
+            [self
+                recordStepInfo:[NSString stringWithFormat:@"DNS解析结果: %@ (%ldms)", firstAddress,
+                                                          time_duration]];
+            
+            _netConnect = [[LDNetConnect alloc] init];
+            _netConnect.delegate = self;
+            if ([firstAddress isEqualToString: _imIP]) {
+                [_netConnect runWithHostAddress:firstAddress port:_imPort];
+            } else {
+                [_netConnect runWithHostAddress:firstAddress port:80];
+            }
+            [self pingIP: firstAddress];
         }
-        [self pingIP: firstAddress];
+    } else {
+        [self recordProgress: 0.7];
+        [self startTraceRouter];
     }
 }
 
-- (void)praseAllDomains {
-    [self recordStepInfo: @"诊断域名..."];
-    
-    _netConnect = [[LDNetConnect alloc] init];
-    _netConnect.delegate = self;
-    for (NSString *extraDomain in _pingExtraDomains) {
-        [self parseDomain: extraDomain];
-        [self recordProgress: 0.6];
+- (void)currentDomainDialogsisDidEnd {
+    if (_diagnosisDomainIndex >= _pingExtraDomains.count - 1) {
+        [self startTraceRouter];
+    } else {
+        _diagnosisDomainIndex++;
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [self dialogsisEachDomain];
+        });
     }
-    
-    // 单独测试IM连接
-    [self parseDomain: _imIP];
-    
-    [self recordProgress: 0.7];
+}
+
+- (NSString *)currentDomain {
+    if (_diagnosisDomainIndex < _pingExtraDomains.count) {
+        return _pingExtraDomains[_diagnosisDomainIndex];
+    } else {
+        return nil;
+    }
 }
 
 /**
@@ -406,7 +421,7 @@ static NSString *const kCheckOutIPURL = @"";
 
 - (void)netPingDidEnd
 {
-    // net
+    [self currentDomainDialogsisDidEnd];
 }
 
 #pragma mark - traceRouteDelegate
@@ -419,6 +434,7 @@ static NSString *const kCheckOutIPURL = @"";
 - (void)traceRouteDidEnd
 {
     _isRunning = NO;
+    _diagnosisDomainIndex = 0;
     [self recordStepInfo:@"\n网络诊断结束\n"];
     if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisDidEnd:)]) {
         [self.delegate netDiagnosisDidEnd:_logInfo];
@@ -437,6 +453,9 @@ static NSString *const kCheckOutIPURL = @"";
 {
     if (success) {
         _connectSuccess = YES;
+    } else {
+        // TCP连接失败，继续下一个诊断
+        [self currentDomainDialogsisDidEnd];
     }
 }
 

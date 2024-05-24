@@ -20,6 +20,8 @@
     BOOL _isRunning;
 }
 
+@property (nonatomic, strong, nullable) dispatch_queue_t ioQueue;
+
 @end
 
 @implementation ViewController
@@ -74,18 +76,21 @@
     [self.view addSubview:_txtView_log];
 
     // Do any additional setup after loading the view, typically from a nib.
-    
-    NSArray *ex = @[@"xiaomajia-app.oss-cn-hangzhou.aliyuncs.com",
-                   @"xiaomajia-im.oss-cn-hangzhou.aliyuncs.com",
-                   @"oss-cn-hangzhou.aliyuncs.com", 
+    // Create IO serial queue
+    _ioQueue = dispatch_queue_create("com.hackemist.SDImageCache", DISPATCH_QUEUE_SERIAL);
+    NSArray *ex = @[
+//        @"xiaomajia-app.oss-cn-hangzhou.aliyuncs.com",
+//                   @"xiaomajia-im.oss-cn-hangzhou.aliyuncs.com",
+//                   @"oss-cn-hangzhou.aliyuncs.com", 
 //                   @"qiniu.mrpyq.com",
 //                   @"imres.mrpyq.com",
 //                   @"imoss.mrpyq.com",
 //                    @"mposs.mrpyq.com",
                     @"imres.xiaomajia.com",
-                    @"appres.xiaomajia.com",
-                    @"res.xiaomajia.com",
-                    @"qiniuac.mrpyq.com"];
+//                    @"appres.xiaomajia.com",
+//                    @"res.xiaomajia.com",
+//                    @"qiniuac.mrpyq.com"
+    ];
     
     _netDiagnoService = [[LDNetDiagnoService alloc] initWithAppCode:@"test"
                                                             appName:@"网络诊断应用"
@@ -118,7 +123,9 @@
         _txtView_log.text = @"";
         _logInfo = @"";
         _isRunning = !_isRunning;
-        [_netDiagnoService startNetDiagnosis];
+//        dispatch_async(self.ioQueue, ^{
+            [_netDiagnoService startNetDiagnosis];
+//        });
     } else {
         [_indicatorView stopAnimating];
         _isRunning = !_isRunning;
