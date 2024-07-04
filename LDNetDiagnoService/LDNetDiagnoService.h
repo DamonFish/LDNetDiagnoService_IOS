@@ -40,6 +40,8 @@
 
 - (NSInteger)netDiagnosisGetNetworkType;
 
+- (NSString* )netDiagnosisNetworkTypeName;
+
 @end
 
 

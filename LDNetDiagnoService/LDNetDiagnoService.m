@@ -294,10 +294,10 @@ static NSString *const kCheckOutIPURL = @"";
         [self recordStepInfo:[NSString stringWithFormat:@"当前是否联网: 未联网"]];
     } else {
         [self recordStepInfo:[NSString stringWithFormat:@"当前是否联网: 已联网"]];
-        if (_curNetType > 0 && _curNetType < 6) {
-            [self
-             recordStepInfo:[NSString stringWithFormat:@"当前联网类型: %@",
-                             [typeArr objectAtIndex:_curNetType - 1]]];
+        
+        if (self.delegate && [self.delegate respondsToSelector:@selector(netDiagnosisNetworkTypeName)]) {
+            NSString *networkTypeName = [self.delegate netDiagnosisNetworkTypeName];
+            [self recordStepInfo:[NSString stringWithFormat:@"当前联网类型: %@", networkTypeName]];
         }
     }
 }
