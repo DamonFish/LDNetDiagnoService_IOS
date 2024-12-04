@@ -7,6 +7,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <sys/_types/_sa_family_t.h>
 
 #if TARGET_OS_EMBEDDED || TARGET_IPHONE_SIMULATOR
 #import <CFNetwork/CFNetwork.h>
